@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import redis.clients.jedis.*;
-import redis.clients.util.Pool;
 import redis.clients.util.Slowlog;
 
 import static redis.clients.jedis.Protocol.Keyword.MATCH;
@@ -444,17 +443,7 @@ public class MockJedis extends Jedis {
 	}
 
 	@Override
-	public Long pexpire(final String key, final int milliseconds) {
-		return pipeline.pexpire(key, milliseconds).get();
-	}
-
-	@Override
 	public Long pexpire(final String key, final long milliseconds) {
-		return pipeline.pexpire(key, milliseconds).get();
-	}
-
-	@Override
-	public Long pexpire(final byte[] key, final int milliseconds) {
 		return pipeline.pexpire(key, milliseconds).get();
 	}
 
@@ -1138,18 +1127,8 @@ public class MockJedis extends Jedis {
 	}
 
 	@Override
-	public void subscribe(JedisPubSub jedisPubSub, String... channels) {
-		super.subscribe(jedisPubSub, channels);
-	}
-
-	@Override
 	public Long publish(String channel, String message) {
 		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
-	}
-
-	@Override
-	public void psubscribe(JedisPubSub jedisPubSub, String... patterns) {
-		super.psubscribe(jedisPubSub, patterns);
 	}
 
 	@Override
@@ -1283,46 +1262,6 @@ public class MockJedis extends Jedis {
 	}
 
 	@Override
-	public ScanResult<String> scan(int cursor) {
-		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
-	}
-
-	@Override
-	public ScanResult<String> scan(int cursor, ScanParams params) {
-		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
-	}
-
-	@Override
-	public ScanResult<Map.Entry<String, String>> hscan(String key, int cursor) {
-		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
-	}
-
-	@Override
-	public ScanResult<Map.Entry<String, String>> hscan(String key, int cursor, ScanParams params) {
-		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
-	}
-
-	@Override
-	public ScanResult<String> sscan(String key, int cursor) {
-		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
-	}
-
-	@Override
-	public ScanResult<String> sscan(String key, int cursor, ScanParams params) {
-		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
-	}
-
-	@Override
-	public ScanResult<Tuple> zscan(String key, int cursor) {
-		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
-	}
-
-	@Override
-	public ScanResult<Tuple> zscan(String key, int cursor, ScanParams params) {
-		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
-	}
-
-	@Override
 	public ScanResult<String> scan(String cursor) {
 		return scan(cursor, (new ScanParams()).match("*"));
 	}
@@ -1361,7 +1300,7 @@ public class MockJedis extends Jedis {
 
 		// Our simple implementation of SCAN is really a plain wrapper for KEYS,
 		// relying on the current mock implementation of the pattern search.
-		return new ScanResult<String>("0", new ArrayList<String>(keys(match)));
+		return new ScanResult<>("0", new ArrayList<>(keys(match)));
 	}
 	
 	@Override
@@ -1505,16 +1444,6 @@ public class MockJedis extends Jedis {
 	}
 
 	@Override
-	public void close() {
-		super.close();
-	}
-
-	@Override
-	public void setDataSource(Pool<Jedis> jedisPool) {
-		super.setDataSource(jedisPool);
-	}
-
-	@Override
 	public Long pfadd(String key, String... elements) {
 		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
 	}
@@ -1655,21 +1584,6 @@ public class MockJedis extends Jedis {
 	}
 
 	@Override
-	public List<Object> multi(TransactionBlock jedisTransaction) {
-		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
-	}
-
-	@Override
-	protected void checkIsInMulti() {
-		super.checkIsInMulti();
-	}
-
-	@Override
-	public void resetState() {
-		super.resetState();
-	}
-
-	@Override
 	public String watch(byte[]... keys) {
 		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
 	}
@@ -1711,11 +1625,6 @@ public class MockJedis extends Jedis {
 
 	@Override
 	public String auth(String password) {
-		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
-	}
-
-	@Override
-	public List<Object> pipelined(PipelineBlock jedisPipeline) {
 		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
 	}
 
@@ -1880,11 +1789,6 @@ public class MockJedis extends Jedis {
 	}
 
 	@Override
-	public void monitor(JedisMonitor jedisMonitor) {
-		super.monitor(jedisMonitor);
-	}
-
-	@Override
 	public String slaveof(String host, int port) {
 		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
 	}
@@ -1912,11 +1816,6 @@ public class MockJedis extends Jedis {
 	@Override
 	public boolean isConnected() {
 		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
-	}
-
-	@Override
-	public void sync() {
-		super.sync();
 	}
 
 	@Override
@@ -1987,16 +1886,6 @@ public class MockJedis extends Jedis {
 	@Override
 	public Long publish(byte[] channel, byte[] message) {
 		throw new UnsupportedOperationException(NOT_IMPLEMENTED);
-	}
-
-	@Override
-	public void subscribe(BinaryJedisPubSub jedisPubSub, byte[]... channels) {
-		super.subscribe(jedisPubSub, channels);
-	}
-
-	@Override
-	public void psubscribe(BinaryJedisPubSub jedisPubSub, byte[]... patterns) {
-		super.psubscribe(jedisPubSub, patterns);
 	}
 
 	@Override

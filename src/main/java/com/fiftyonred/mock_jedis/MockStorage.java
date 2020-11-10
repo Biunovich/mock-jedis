@@ -14,6 +14,9 @@ public class MockStorage {
 	private static final int NUM_DBS = 16;
 	public static final long MILLISECONDS_IN_SECOND = 1000L;
 
+	private static final String WRONG_KIND_OF_VALUE_MSG = "ERR Operation against a key holding the wrong kind of value";
+	private static final String IS_NOT_INTEGER_OR_OUT_OF_RANGE_MSG = "ERR value is not an integer or out of range";
+
 	private final WildcardMatcher wildcardMatcher = new WildcardMatcher();
 	private final List<Map<DataContainer, KeyInformation>> allKeys;
 	private final List<Map<DataContainer, DataContainer>> allStorage;
@@ -28,18 +31,20 @@ public class MockStorage {
 	private Map<DataContainer, List<DataContainer>> listStorage;
 	private Map<DataContainer, Set<DataContainer>> setStorage;
 
+	private static final Random RANDOM = new Random(1337);
+
 	public MockStorage() {
-		allKeys = new ArrayList<Map<DataContainer, KeyInformation>>(NUM_DBS);
-		allStorage = new ArrayList<Map<DataContainer, DataContainer>>(NUM_DBS);
-		allHashStorage = new ArrayList<Map<DataContainer, Map<DataContainer, DataContainer>>>(NUM_DBS);
-		allListStorage = new ArrayList<Map<DataContainer, List<DataContainer>>>(NUM_DBS);
-		allSetStorage = new ArrayList<Map<DataContainer, Set<DataContainer>>>(NUM_DBS);
+		allKeys = new ArrayList<>(NUM_DBS);
+		allStorage = new ArrayList<>(NUM_DBS);
+		allHashStorage = new ArrayList<>(NUM_DBS);
+		allListStorage = new ArrayList<>(NUM_DBS);
+		allSetStorage = new ArrayList<>(NUM_DBS);
 		for (int i = 0; i < NUM_DBS; ++i) {
-			allKeys.add(new HashMap<DataContainer, KeyInformation>());
-			allStorage.add(new HashMap<DataContainer, DataContainer>());
-			allHashStorage.add(new HashMap<DataContainer, Map<DataContainer, DataContainer>>());
-			allListStorage.add(new HashMap<DataContainer, List<DataContainer>>());
-			allSetStorage.add(new HashMap<DataContainer, Set<DataContainer>>());
+			allKeys.add(new HashMap<>());
+			allStorage.add(new HashMap<>());
+			allHashStorage.add(new HashMap<>());
+			allListStorage.add(new HashMap<>());
+			allSetStorage.add(new HashMap<>());
 		}
 		select(0);
 	}
@@ -49,7 +54,7 @@ public class MockStorage {
 	}
 
 	private static <T> T getRandomElementFromSet(final Set<T> set) {
-		return (T) set.toArray()[(int) (Math.random() * set.size())];
+		return new ArrayList<>(set).get(RANDOM.nextInt() * set.size());
 	}
 
 	public int dbSize() {
@@ -248,7 +253,7 @@ public class MockStorage {
 			throw new JedisDataException("ERR wrong number of arguments for 'mget' command");
 		}
 
-		final List<DataContainer> result = new ArrayList<DataContainer>(keys.length);
+		final List<DataContainer> result = new ArrayList<>(keys.length);
 		for (final DataContainer key : keys) {
 			result.add(getContainerFromStorage(key, false));
 		}
@@ -288,12 +293,12 @@ public class MockStorage {
 		try {
 			oldValue = val == null || val.getString().isEmpty() ? 0L : Long.parseLong(val.getString());
 		} catch (final NumberFormatException ignored) {
-			throw new JedisDataException("ERR value is not an integer or out of range");
+			throw new JedisDataException(IS_NOT_INTEGER_OR_OUT_OF_RANGE_MSG);
 		}
 
 		// check for overflow
 		if (oldValue > 0L ? integer > Long.MAX_VALUE - oldValue : integer < Long.MIN_VALUE - oldValue) {
-			throw new JedisDataException("ERR value is not an integer or out of range");
+			throw new JedisDataException(IS_NOT_INTEGER_OR_OUT_OF_RANGE_MSG);
 		}
 
 		final long result = oldValue + integer;
@@ -315,35 +320,26 @@ public class MockStorage {
 	}
 
 	private static Comparator<DataContainer> makeComparator(final Collection<String> params) {
-		final Comparator<DataContainer> comparator;
 		final int direction = params.contains(Protocol.Keyword.DESC.name().toLowerCase()) ? -1 : 1;
 		if (params.contains(Protocol.Keyword.ALPHA.name().toLowerCase())) {
-			comparator = new Comparator<DataContainer>() {
-				@Override
-				public int compare(final DataContainer o1, final DataContainer o2) {
-					return o1.compareTo(o2) * direction;
-				}
-			};
+			return (a, b) -> a.compareTo(b) * direction;
 		} else {
-			comparator = new Comparator<DataContainer>() {
-				@Override
-				public int compare(final DataContainer o1, final DataContainer o2) {
-					final Long i1, i2;
-					try {
-						i1 = Long.parseLong(o1.getString());
-						i2 = Long.parseLong(o2.getString());
-					} catch (final NumberFormatException e) {
-						throw new JedisDataException("ERR One or more scores can't be converted into double");
-					}
-					return i1.compareTo(i2) * direction;
+			return (a, b) -> {
+				final Long i1;
+				final Long i2;
+				try {
+					i1 = Long.parseLong(a.getString());
+					i2 = Long.parseLong(b.getString());
+				} catch (final NumberFormatException e) {
+					throw new JedisDataException("ERR One or more scores can't be converted into double");
 				}
+				return i1.compareTo(i2) * direction;
 			};
 		}
-		return comparator;
 	}
 
 	public List<DataContainer> sort(final DataContainer key, final SortingParams sortingParameters) {
-		final List<DataContainer> result = new ArrayList<DataContainer>();
+		final List<DataContainer> result = new ArrayList<>();
 		final KeyInformation info = keys.get(key);
 		if (info != null) {
 			switch (info.getType()) {
@@ -354,7 +350,7 @@ public class MockStorage {
 					result.addAll(setStorage.get(key));
 					break;
 				case SORTED_SET:
-					throw new RuntimeException("Not implemented");
+					throw new JedisDataException("Not implemented");
 				default:
 					throw new JedisDataException("WRONGTYPE Operation against a key holding the wrong kind of value");
 			}
@@ -364,7 +360,7 @@ public class MockStorage {
 
 		Collections.sort(result, makeComparator(params));
 
-		final List<DataContainer> filteredResult = new ArrayList<DataContainer>(result.size());
+		final List<DataContainer> filteredResult = new ArrayList<>(result.size());
 		final int limitpos = params.indexOf(Protocol.Keyword.LIMIT.name().toLowerCase());
 		if (limitpos >= 0) {
 			final int start = Math.max(Integer.parseInt(params.get(limitpos + 1)), 0);
@@ -381,7 +377,7 @@ public class MockStorage {
 	}
 
 	protected static List<String> convertToStrings(final Collection<byte[]> collection) {
-		final List<String> result = new ArrayList<String>(collection.size());
+		final List<String> result = new ArrayList<>(collection.size());
 		for (final byte[] entry : collection) {
 			result.add(new String(entry, CHARSET));
 		}
@@ -476,10 +472,10 @@ public class MockStorage {
 	public List<DataContainer> hmget(final DataContainer key, final DataContainer... fields) {
 		final Map<DataContainer, DataContainer> hash = getHashFromStorage(key, false);
 		if (hash == null) {
-			return null;
+			return new ArrayList<>();
 		}
 
-		final List<DataContainer> result = new ArrayList<DataContainer>();
+		final List<DataContainer> result = new ArrayList<>();
 		for (final DataContainer field : fields) {
 			result.add(hash.get(field));
 		}
@@ -498,13 +494,13 @@ public class MockStorage {
 
 		DataContainer val = m.get(field);
 		if (val == null) {
-			val = DataContainer.from(Long.valueOf(0L).toString());
+			val = DataContainer.from(Long.toString(0L));
 		}
 		final long result;
 		try {
 			result = Long.valueOf(val.getString()) + value;
 		} catch (final NumberFormatException ignored) {
-			throw new JedisDataException("ERR value is not an integer or out of range");
+			throw new JedisDataException(IS_NOT_INTEGER_OR_OUT_OF_RANGE_MSG);
 		}
 		m.put(field, DataContainer.from(Long.toString(result)));
 		return result;
@@ -552,7 +548,7 @@ public class MockStorage {
 	public synchronized int lpush(final DataContainer key, final DataContainer... string) {
 		List<DataContainer> list = getListFromStorage(key, true);
 		if (list == null) {
-			list = new ArrayList<DataContainer>();
+			list = new ArrayList<>();
 			listStorage.put(key, list);
 		}
 		Collections.addAll(list, string);
@@ -572,7 +568,7 @@ public class MockStorage {
 	public synchronized List<DataContainer> lrange(final DataContainer key, long start, long end) {
 		final List<DataContainer> full = getListFromStorage(key, false);
 
-		final List<DataContainer> result = new ArrayList<DataContainer>();
+		final List<DataContainer> result = new ArrayList<>();
 
 		if (start < 0L) {
 			start = Math.max(full.size() + start, 0L);
@@ -584,7 +580,7 @@ public class MockStorage {
 			return Collections.emptyList();
 		}
 
-		end = Math.min(full.size() - 1, end);
+		end = Math.min(full.size() - 1L, end);
 
 		for (int i = (int) start; i <= end; i++) {
 			result.add(full.get(i));
@@ -593,7 +589,7 @@ public class MockStorage {
 	}
 
 	public Set<DataContainer> keys(final DataContainer pattern) {
-		final Set<DataContainer> result = new HashSet<DataContainer>();
+		final Set<DataContainer> result = new HashSet<>();
 		for (final DataContainer key : keys.keySet()) {
 			if (wildcardMatcher.match(key.getString(), pattern.getString())) {
 				result.add(key);
@@ -610,7 +606,7 @@ public class MockStorage {
 			return true;
 		} else {
 			if (info.getType() != type) {
-				throw new JedisDataException("ERR Operation against a key holding the wrong kind of value");
+				throw new JedisDataException(WRONG_KIND_OF_VALUE_MSG);
 			}
 			if (resetTTL) {
 				info.setExpiration(-1L);
@@ -631,7 +627,7 @@ public class MockStorage {
 			return null; // no such key exists
 		}
 		if (info.getType() != KeyType.STRING) {
-			throw new JedisDataException("ERR Operation against a key holding the wrong kind of value");
+			throw new JedisDataException(WRONG_KIND_OF_VALUE_MSG);
 		}
 		if (info.isTTLSetAndKeyExpired()) {
 			storage.remove(key);
@@ -646,14 +642,14 @@ public class MockStorage {
 		if (info == null) {
 			if (createIfNotExist) {
 				createOrUpdateKey(key, KeyType.HASH, false);
-				final Map<DataContainer, DataContainer> result = new HashMap<DataContainer, DataContainer>();
+				final Map<DataContainer, DataContainer> result = new HashMap<>();
 				hashStorage.put(key, result);
 				return result;
 			}
 			return null; // no such key exists
 		}
 		if (info.getType() != KeyType.HASH) {
-			throw new JedisDataException("ERR Operation against a key holding the wrong kind of value");
+			throw new JedisDataException(WRONG_KIND_OF_VALUE_MSG);
 		}
 		if (info.isTTLSetAndKeyExpired()) {
 			hashStorage.remove(key);
@@ -668,19 +664,19 @@ public class MockStorage {
 		if (info == null) {
 			if (createIfNotExist) {
 				createOrUpdateKey(key, KeyType.LIST, false);
-				final List<DataContainer> result = new ArrayList<DataContainer>();
+				final List<DataContainer> result = new ArrayList<>();
 				listStorage.put(key, result);
 				return result;
 			}
-			return null; // no such key exists
+			return new ArrayList<>(); // no such key exists
 		}
 		if (info.getType() != KeyType.LIST) {
-			throw new JedisDataException("ERR Operation against a key holding the wrong kind of value");
+			throw new JedisDataException(WRONG_KIND_OF_VALUE_MSG);
 		}
 		if (info.isTTLSetAndKeyExpired()) {
 			listStorage.remove(key);
 			keys.remove(key);
-			return null;
+			return new ArrayList<>();
 		}
 		return listStorage.get(key);
 	}
@@ -690,19 +686,19 @@ public class MockStorage {
 		if (info == null) {
 			if (createIfNotExist) {
 				createOrUpdateKey(key, KeyType.SET, false);
-				final Set<DataContainer> result = new HashSet<DataContainer>();
+				final Set<DataContainer> result = new HashSet<>();
 				setStorage.put(key, result);
 				return result;
 			}
-			return null; // no such key exists
+			return new HashSet<>(); // no such key exists
 		}
 		if (info.getType() != KeyType.SET) {
-			throw new JedisDataException("ERR Operation against a key holding the wrong kind of value");
+			throw new JedisDataException(WRONG_KIND_OF_VALUE_MSG);
 		}
 		if (info.isTTLSetAndKeyExpired()) {
 			setStorage.remove(key);
 			keys.remove(key);
-			return null;
+			return new HashSet<>();
 		}
 		return setStorage.get(key);
 	}
@@ -741,7 +737,7 @@ public class MockStorage {
 		if (l <= 0) {
 			throw new JedisDataException("ERR wrong number of arguments for 'sdiff' command");
 		}
-		final Set<DataContainer> result = new HashSet<DataContainer>(getSetFromStorage(keys[0], true));
+		final Set<DataContainer> result = new HashSet<>(getSetFromStorage(keys[0], true));
 		for (int i = 1; i < l; ++i) {
 			final Set<DataContainer> set = getSetFromStorage(keys[i], true);
 			result.removeAll(set);
@@ -769,7 +765,7 @@ public class MockStorage {
 			throw new JedisDataException("ERR wrong number of arguments for 'sinter' command");
 		}
 
-		final Set<DataContainer> firstSet = new HashSet<DataContainer>(getSetFromStorage(keys[0], true));
+		final Set<DataContainer> firstSet = new HashSet<>(getSetFromStorage(keys[0], true));
 		for (int i = 1; i < l; ++i) {
 			final Set<DataContainer> set = getSetFromStorage(keys[i], true);
 			firstSet.retainAll(set);
@@ -829,7 +825,7 @@ public class MockStorage {
 		if (l <= 0) {
 			throw new JedisDataException("ERR wrong number of arguments for 'sunion' command");
 		}
-		final Set<DataContainer> result = new HashSet<DataContainer>(getSetFromStorage(keys[0], true));
+		final Set<DataContainer> result = new HashSet<>(getSetFromStorage(keys[0], true));
 		for (int i = 1; i < l; ++i) {
 			final Set<DataContainer> set = getSetFromStorage(keys[i], true);
 			result.addAll(set);

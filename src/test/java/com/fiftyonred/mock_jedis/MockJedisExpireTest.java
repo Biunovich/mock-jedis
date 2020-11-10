@@ -25,7 +25,7 @@ public class MockJedisExpireTest {
 
 		Thread.sleep(delay + 1);
 
-		assertTrue(j.pttl("test") == -1);
+		assertEquals(j.pttl("test").longValue(), -1L);
 	}
 
 	@Test
@@ -70,7 +70,7 @@ public class MockJedisExpireTest {
 
 	@Test
 	public void testPExpire() throws InterruptedException {
-		int delay = 200;
+		long delay = 200;
 
 		j.set("test", "123");
 		j.pexpire("test", delay);
@@ -96,7 +96,7 @@ public class MockJedisExpireTest {
 		Thread.sleep(delay * 1000 + 1);
 
 		assertNull(j.get("test"));
-		assertTrue(j.ttl("test") == -1);
+		assertEquals(j.ttl("test").longValue(), -1L);
 	}
 
 	@Test
@@ -112,7 +112,7 @@ public class MockJedisExpireTest {
 		Thread.sleep(delay + 1);
 
 		assertNull(j.get("test"));
-		assertTrue(j.ttl("test") == -1);
+		assertEquals(j.ttl("test").longValue(), -1L);
 	}
 
 	@Test
@@ -134,7 +134,7 @@ public class MockJedisExpireTest {
 		Thread.sleep(delay + 1);
 
 		assertNull(j.get("test"));
-		assertTrue(j.pttl("test") == -1);
+		assertEquals(j.pttl("test").longValue(), -1L);
 
 	}
 }

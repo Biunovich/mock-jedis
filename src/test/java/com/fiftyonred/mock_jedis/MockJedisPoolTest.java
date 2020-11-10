@@ -1,5 +1,7 @@
 package com.fiftyonred.mock_jedis;
 
+import static org.junit.Assert.assertNotNull;
+
 import org.junit.Test;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -10,6 +12,7 @@ public class MockJedisPoolTest {
 	public void testPool() {
 		JedisPool pool = new MockJedisPool(new JedisPoolConfig(), "someunknownhost");
 		Jedis jedis = pool.getResource();
+		assertNotNull(jedis);
 		pool.returnResource(jedis);
 	}
 }
